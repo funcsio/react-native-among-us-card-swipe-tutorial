@@ -1,37 +1,17 @@
 import React, {useEffect, useState} from 'react';
-import {
-  SafeAreaView,
-  StyleSheet,
-  ScrollView,
-  Image,
-  View,
-  Dimensions,
-  Text,
-  StatusBar,
-  TouchableOpacity,
-  withSpring,
-  Button,
-} from 'react-native';
+import {StyleSheet, Image, View, Dimensions, Text} from 'react-native';
 import {PanGestureHandler} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withTiming,
   useAnimatedGestureHandler,
-  withDecay,
   cancelAnimation,
   runOnJS,
-  runOnUI,
   useAnimatedRef,
   measure,
 } from 'react-native-reanimated';
-import Sound from 'react-native-sound';
 import useAudio from './hooks/useAudio';
-// Enable playback in silence mode
-
-// Load the sound file 'whoosh.mp3' from the app bundle
-// See notes below about preloading sounds within initialization code below.
 
 const DIMENSION_VW = Dimensions.get('window').width;
 const DIMENSION_VH = Dimensions.get('window').height;
@@ -40,17 +20,23 @@ function App() {
   const CARD_DENIED_SOUND = useAudio('card_denied.mp3');
   const CARD_ACCEPTED_SOUND = useAudio('card_accepted.mp3');
 
-  const aref = useAnimatedRef();
-  const y = useSharedValue(0);
+  const [IndicatorLight, setIndicatorLight] = useState(0); // 0 -> No Light  1 -> Red   2-> Green
+
+  const CardMachineRef = useAnimatedRef();
+  const X = useSharedValue(0);
   const speedData = useSharedValue([]);
 
-  const addVelocityY = (v) => {
-    // 'worklet';
-    // console.log("Hey I'm running on the UI thread",v);
+  const addVelocityX = (v) => {
     speedData.value = [...speedData.value, v];
   };
 
   const [swipeMsg, setSwipeMsg] = useState('PLEASE SWIPE CARD');
+  const badRead = () => {
+    CARD_DENIED_SOUND.stop();
+    CARD_DENIED_SOUND.play();
+    setSwipeMsg('BAD READ.  TRY AGAIN');
+    setIndicatorLight(1);
+  };
   const isSwipeAccepted = () => {
     let total = 0;
     for (const velocity of speedData.value) {
@@ -63,18 +49,20 @@ function App() {
       CARD_ACCEPTED_SOUND.stop();
       CARD_ACCEPTED_SOUND.play();
       setSwipeMsg('ACCEPTED.  THANK YOU');
+      setIndicatorLight(2);
     } else if (averageVelocity <= 1000) {
       CARD_DENIED_SOUND.stop();
       CARD_DENIED_SOUND.play();
       setSwipeMsg('TOO SLOW.  TRY AGAIN');
+      setIndicatorLight(1);
     } else {
       CARD_DENIED_SOUND.stop();
       CARD_DENIED_SOUND.play();
       setSwipeMsg('TOO FAST.  TRY AGAIN');
+      setIndicatorLight(1);
     }
   };
 
-  console.log(Sound.MAIN_BUNDLE);
   const resetSpeedData = () => {
     speedData.value = [];
   };
@@ -84,21 +72,26 @@ function App() {
       runOnJS(resetSpeedData)();
     },
 
-    onActive: (event) => {
-      if (event.translationY >= y.value) {
-        y.value = event.translationY;
-        runOnJS(addVelocityY)(event.velocityY);
+    onActive: (event, ctx) => {
+      ctx.x = event.translationX;
+      if (event.translationX >= X.value) {
+        X.value = event.translationX;
+        runOnJS(addVelocityX)(event.velocityX);
       } else {
-        y.value = withTiming(0);
-        cancelAnimation(y);
+        X.value = withTiming(0);
+        cancelAnimation(X);
       }
     },
-    onEnd: (_) => {
-      y.value = withTiming(0);
-      runOnJS(isSwipeAccepted)();
+    onEnd: (_, ctx) => {
+      X.value = withTiming(0);
+
+      const SwipeMachineLayout = measure(CardMachineRef);
+      if (ctx.x < SwipeMachineLayout.pageX + SwipeMachineLayout.width / 2)
+        runOnJS(badRead)();
+      else runOnJS(isSwipeAccepted)();
     },
     onCancel: () => {
-      y.value = withTiming(0);
+      X.value = withTiming(0);
       runOnJS(isSwipeAccepted)();
     },
   });
@@ -107,7 +100,7 @@ function App() {
     return {
       transform: [
         {
-          translateY: y.value,
+          translateX: X.value,
         },
       ],
     };
@@ -117,67 +110,90 @@ function App() {
     <PanGestureHandler
       onGestureEvent={gestureHandler}
       // enabled={!disabledPanGesture}
-      shouldCancelWhenOutside>
-      <Animated.View
-        style={{
-          flex: 1,
-          display: 'flex',
-        }}
-        ref={aref}
-        onLayout={(event) => {
-          const layout = event.nativeEvent.layout;
-          console.log('height:', layout.height);
-          console.log('width:', layout.width);
-          console.log('x:', layout.x);
-          console.log('y:', layout.y);
-        }}>
+    >
+      <Animated.View style={styles.root}>
+        <Image
+          source={require('./assets/background.jpg')}
+          style={styles.background}
+          resizeMode="cover"
+        />
         <Animated.Image
           source={require('./assets/swipe-card.png')}
-          style={[
-            animatedStyle,
-            {
-              position: 'absolute',
-              height: 200,
-              right: '35%',
-              width: undefined,
-              aspectRatio: 0.6,
-            },
-          ]}
-          resizeMode="center"></Animated.Image>
+          style={[animatedStyle, styles.card]}
+          resizeMode="center"
+        />
         <View style={styles.cardMachineCont}>
           <Image
+            ref={CardMachineRef}
             source={require('./assets/card-machine.png')}
             style={styles.cardMachine}
             resizeMode="contain"
           />
+          <View style={styles.lightsCont}>
+            <Image
+              source={require('./assets/red.png')}
+              style={[styles.light, {opacity: IndicatorLight === 1 ? 1 : 0.3}]}
+            />
+            <Image
+              source={require('./assets/green.png')}
+              style={[styles.light, {opacity: IndicatorLight === 2 ? 1 : 0.3}]}
+            />
+          </View>
+          <Text style={styles.swipeMsg}>{swipeMsg}</Text>
         </View>
-        <Text style={styles.swipeMsg}>{swipeMsg}</Text>
       </Animated.View>
     </PanGestureHandler>
   );
 }
 
 const styles = StyleSheet.create({
-  cardMachineCont: {
+  root: {
+    flex: 1,
+    display: 'flex',
+    backgroundColor: '#000',
+  },
+  background: {
     position: 'absolute',
-    right: '5%',
-    top: '25%',
+    flex: 1,
+    width: DIMENSION_VW,
+    height: DIMENSION_VH,
+    opacity: 0.4,
+  },
+  card: {
+    position: 'absolute',
+    left: 10,
+    top: '20%',
+    height: 200,
+    width: 200,
+    aspectRatio: 0.2,
+  },
+  cardMachineCont: {
+    flex: 1,
   },
   cardMachine: {
-    height: DIMENSION_VH / 2,
-
-    aspectRatio: 0.35,
+    position: 'absolute',
+    top: 0,
+    height: DIMENSION_VH / 2.5,
+    alignSelf: 'center',
+  },
+  lightsCont: {
+    position: 'absolute',
+    top: '27%',
+    display: 'flex',
+    right: '25%',
+    flexDirection: 'row',
+  },
+  light: {
+    marginHorizontal: 2,
   },
 
   swipeMsg: {
     fontFamily: 'DSEG14Classic-BoldItalic',
-    right: '-37.5%',
-    top: '55%',
-    transform: [{rotate: '90deg'}],
+    left: '29%',
+    top: '6%',
     color: '#ddd',
-    // backgroundColor: '#0f0',
-    fontSize: DIMENSION_VH / 50,
-    // width:200
+    fontSize: DIMENSION_VW / 50,
+    letterSpacing: 1.2,
   },
 });
 export default App;
