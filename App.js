@@ -1,5 +1,12 @@
 import React, {useEffect, useState} from 'react';
-import {StyleSheet, Image, View, Dimensions, Text} from 'react-native';
+import {
+  StyleSheet,
+  Image,
+  View,
+  Dimensions,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import {PanGestureHandler} from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -23,6 +30,7 @@ function App() {
   const [IndicatorLight, setIndicatorLight] = useState(0); // 0 -> No Light  1 -> Red   2-> Green
 
   const CardMachineRef = useAnimatedRef();
+  const CardRef = useAnimatedRef();
   const X = useSharedValue(0);
   const speedData = useSharedValue([]);
 
@@ -86,9 +94,16 @@ function App() {
       X.value = withTiming(0);
 
       const SwipeMachineLayout = measure(CardMachineRef);
-      if (ctx.x < SwipeMachineLayout.pageX + SwipeMachineLayout.width / 2)
+      const CardLayout = measure(CardRef);
+
+      if (
+        ctx.x + CardLayout.width <
+        (SwipeMachineLayout.pageX + SwipeMachineLayout.width) * 0.95
+      ) {
         runOnJS(badRead)();
-      else runOnJS(isSwipeAccepted)();
+      } else {
+        runOnJS(isSwipeAccepted)();
+      }
     },
     onCancel: () => {
       X.value = withTiming(0);
@@ -117,11 +132,15 @@ function App() {
           style={styles.background}
           resizeMode="cover"
         />
+
         <Animated.Image
           source={require('./assets/swipe-card.png')}
           style={[animatedStyle, styles.card]}
           resizeMode="center"
+          ref={CardRef}
         />
+
+        <Image source={require('./assets/wallet.png')} style={styles.wallet} />
         <View style={styles.cardMachineCont}>
           <Image
             ref={CardMachineRef}
@@ -159,12 +178,23 @@ const styles = StyleSheet.create({
     height: DIMENSION_VH,
     opacity: 0.4,
   },
+  wallet: {
+    position: 'absolute',
+    zIndex: 2,
+    width: DIMENSION_VW / 2.5,
+    height: undefined,
+    aspectRatio: 2,
+    left: '-4%',
+    bottom: '-15%',
+    transform: [{rotateZ: '5deg'}],
+  },
+
   card: {
     position: 'absolute',
     left: 10,
-    top: '20%',
-    height: 200,
-    width: 200,
+    top: '30%',
+    height: 100,
+    width: 150,
     aspectRatio: 0.2,
   },
   cardMachineCont: {
@@ -173,14 +203,16 @@ const styles = StyleSheet.create({
   cardMachine: {
     position: 'absolute',
     top: 0,
-    height: DIMENSION_VH / 2.5,
+    height: DIMENSION_VH / 3,
+    width: undefined,
+    aspectRatio: 2.9,
     alignSelf: 'center',
   },
   lightsCont: {
     position: 'absolute',
-    top: '27%',
+    top: '22%',
     display: 'flex',
-    right: '25%',
+    right: '29%',
     flexDirection: 'row',
   },
   light: {
@@ -189,8 +221,8 @@ const styles = StyleSheet.create({
 
   swipeMsg: {
     fontFamily: 'DSEG14Classic-BoldItalic',
-    left: '29%',
-    top: '6%',
+    left: '32%',
+    top: '5%',
     color: '#ddd',
     fontSize: DIMENSION_VW / 50,
     letterSpacing: 1.2,
