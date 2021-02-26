@@ -53,7 +53,7 @@ function App() {
 
     const averageVelocity = total / speedData.value.length;
 
-    if (averageVelocity > 1000 && averageVelocity < 1300) {
+    if (averageVelocity > 1000 && averageVelocity < 1500) {
       CARD_ACCEPTED_SOUND.stop();
       CARD_ACCEPTED_SOUND.play();
       setSwipeMsg('ACCEPTED.  THANK YOU');
@@ -121,47 +121,51 @@ function App() {
     };
   });
 
-  return (
-    <PanGestureHandler
-      onGestureEvent={gestureHandler}
-      // enabled={!disabledPanGesture}
-    >
-      <Animated.View style={styles.root}>
-        <Image
-          source={require('./assets/background.jpg')}
-          style={styles.background}
-          resizeMode="cover"
-        />
+  const DynamicStyles = {
+    light: {opacity: IndicatorLight === 1 ? 1 : 0.3},
+  };
 
+  return (
+    <View style={styles.root}>
+      <Image
+        source={require('./assets/background.jpg')}
+        style={styles.background}
+        resizeMode="cover"
+      />
+
+      <PanGestureHandler
+        onGestureEvent={gestureHandler}
+        // enabled={!disabledPanGesture}
+      >
         <Animated.Image
           source={require('./assets/swipe-card.png')}
           style={[animatedStyle, styles.card]}
           resizeMode="center"
           ref={CardRef}
         />
+      </PanGestureHandler>
 
-        <Image source={require('./assets/wallet.png')} style={styles.wallet} />
-        <View style={styles.cardMachineCont}>
+      <Image source={require('./assets/wallet.png')} style={styles.wallet} />
+      <View style={styles.cardMachineCont}>
+        <Image
+          ref={CardMachineRef}
+          source={require('./assets/card-machine.png')}
+          style={styles.cardMachine}
+          resizeMode="contain"
+        />
+        <View style={styles.lightsCont}>
           <Image
-            ref={CardMachineRef}
-            source={require('./assets/card-machine.png')}
-            style={styles.cardMachine}
-            resizeMode="contain"
+            source={require('./assets/red.png')}
+            style={[styles.light, DynamicStyles.light]}
           />
-          <View style={styles.lightsCont}>
-            <Image
-              source={require('./assets/red.png')}
-              style={[styles.light, {opacity: IndicatorLight === 1 ? 1 : 0.3}]}
-            />
-            <Image
-              source={require('./assets/green.png')}
-              style={[styles.light, {opacity: IndicatorLight === 2 ? 1 : 0.3}]}
-            />
-          </View>
-          <Text style={styles.swipeMsg}>{swipeMsg}</Text>
+          <Image
+            source={require('./assets/green.png')}
+            style={[styles.light, DynamicStyles.light]}
+          />
         </View>
-      </Animated.View>
-    </PanGestureHandler>
+        <Text style={styles.swipeMsg}>{swipeMsg}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -176,7 +180,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: DIMENSION_VW,
     height: DIMENSION_VH,
-    opacity: 0.4,
+    opacity: 0.2,
   },
   wallet: {
     position: 'absolute',
