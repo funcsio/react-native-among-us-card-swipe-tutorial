@@ -122,7 +122,8 @@ function App() {
   });
 
   const DynamicStyles = {
-    light: {opacity: IndicatorLight === 1 ? 1 : 0.3},
+    redLight: {opacity: IndicatorLight === 1 ? 1 : 0.3},
+    greenLight: {opacity: IndicatorLight === 2 ? 1 : 0.3},
   };
 
   return (
@@ -156,11 +157,11 @@ function App() {
         <View style={styles.lightsCont}>
           <Image
             source={require('./assets/red.png')}
-            style={[styles.light, DynamicStyles.light]}
+            style={[styles.light, DynamicStyles.redLight]}
           />
           <Image
             source={require('./assets/green.png')}
-            style={[styles.light, DynamicStyles.light]}
+            style={[styles.light, DynamicStyles.greenLight]}
           />
         </View>
         <Text style={styles.swipeMsg}>{swipeMsg}</Text>
